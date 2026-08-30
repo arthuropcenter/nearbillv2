@@ -4,6 +4,15 @@
  * Database: rt_rw (sama dengan nearbill v1)
  */
 
+if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $_SERVER['HTTPS'] = 'on';
+}
+$secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+if (PHP_VERSION_ID >= 70300) {
+    session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'samesite' => 'None', 'secure' => $secure, 'httponly' => true]);
+} else {
+    session_set_cookie_params(0, '/; samesite=None', '', $secure, true);
+}
 session_start();
 
 date_default_timezone_set('Asia/Jakarta');
