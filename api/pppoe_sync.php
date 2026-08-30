@@ -25,8 +25,9 @@ if (!$r->connect($ip, $port, $router['username'], decrypt_router_password($route
     respond_error('Login API router gagal', 500);
 }
 
-$secrets = $r->print('/ppp/secret');
-$active = $r->print('/ppp/active');
+// Ambil hanya field yang dibutuhkan agar payload kecil & sinkronisasi cepat
+$secrets = $r->print('/ppp/secret', ['=.proplist=.id,name,profile,disabled,comment']);
+$active = $r->print('/ppp/active', ['=.proplist=.name,.address']);
 $r->disconnect();
 
 $secretByName = [];
@@ -51,23 +52,32 @@ $customers = $koneksi
 
 // ---- Deteksi perbaikan username (fixUsername) dengan scoring ----
 // prioritas: nama eksak (100) > prefix nama (85) > fullname di comment (70) > username di comment (60)
+// Index lowercase dibuat sekali agar tidak scan seluruh secret per customer.
+$secretByLower = [];
+foreach ($secretByName as $sname => $s) {
+    $secretByLower[strtolower($sname)] = $sname;
+}
 $fixMap = [];
 $fixCandidates = [];
 if ($fixUsername) {
     foreach ($customers as $c) {
         $uname = trim($c['pppoe_username']);
-        if ($uname === '' || isset($secretByName[$uname])) continue;
+        if ($uname === '') continue;
+        $un = strtolower(trim($c['username']));
+        $fn = strtolower(trim($c['fullname']));
+        // Sudah cocok eksak -> tidak perlu scoring
+        if (isset($secretByName[$uname]) || ($un !== '' && isset($secretByLower[$un])) || ($fn !== '' && isset($secretByLower[$fn]))) {
+            continue;
+        }
         $best = null;
         $bestScore = 0;
-        foreach ($secretByName as $sname => $s) {
-            $sn = strtolower($sname);
+        foreach ($secretByLower as $sl => $sname) {
+            $s = $secretByName[$sname];
             $cm = strtolower(trim($s['comment'] ?? ''));
-            $un = strtolower(trim($c['username']));
-            $fn = strtolower(trim($c['fullname']));
             $score = 0;
-            if ($sn === $un || ($fn !== '' && $sn === $fn)) {
+            if ($fn !== '' && $sl === $fn) {
                 $score = 100;
-            } elseif (strlen($un) >= 3 && (strpos($sn, $un) === 0 || strpos($un, $sn) === 0)) {
+            } elseif (strlen($un) >= 3 && ($sl === $un || (strpos($sl, $un) === 0 || strpos($un, $sl) === 0))) {
                 $score = 85;
             } elseif ($fn !== '' && $cm !== '' && (strpos($cm, $fn) !== false || strpos($fn, $cm) !== false)) {
                 $score = 70;

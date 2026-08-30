@@ -68,15 +68,30 @@ class RouterOS
      * Kirim perintah API, lalu baca baris (rows) sampai !done.
      * Contoh: $router->print('/ppp/active') => array baris
      *         $router->print('/interface', ['=stats=true']) => include statistik (rx-byte, tx-byte)
+     *
+     * Anti-hang: jika socket EOF/timeout (readSentence kembali kosong),
+     * loop berhenti setelah MAX_EMPTY kali berturut-turut agar request
+     * tidak nge-hang sampai max_execution_time (penyebab 504).
      */
     public function print($path, $words = [])
     {
         $this->send($path . '/print', ...$words);
         $rows = [];
-        while (true) {
+        $emptyStreak = 0;
+        $maxRows = 100000;
+        while (count($rows) < $maxRows) {
             $sentence = $this->readSentence();
             $tag = isset($sentence[0]) ? $sentence[0] : '';
+
             if ($tag === '!done') break;
+
+            // Socket EOF / read timeout -> berhenti, jangan hang
+            if ($tag === '') {
+                if (++$emptyStreak >= 3) break;
+                continue;
+            }
+            $emptyStreak = 0;
+
             if ($tag === '!trap' || $tag === '!fatal') {
                 return ['__error__' => implode(' ', array_slice($sentence, 1))];
             }
