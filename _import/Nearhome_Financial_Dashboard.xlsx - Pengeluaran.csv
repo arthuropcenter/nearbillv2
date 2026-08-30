@@ -1,0 +1,35 @@
+ID Pengeluaran,Tanggal,Kategori,Keterangan,Jumlah (Rp),Metode Bayar,Dibayar Ke,Jenis Biaya
+EXP-001,28-Feb-2025,Lainnya,Laporan No F.Telegram_PGS-002_IV_LAP_2025,"Rp13,196,379",Transfer,Seller/Vendor,Lainnya
+EXP-002,02-Mar-2025,Bandwidth,INV-IDN-414787-96346-78,"Rp750,000",Transfer,ISP,Operasional
+EXP-003,02-Mar-2025,Gaji,Support,"Rp900,000",Transfer,Teknisi,Operasional
+EXP-004,15-Mar-2025,Gaji,Support,"Rp150,000",Transfer,Teknisi,Operasional
+EXP-005,30-Mar-2025,Bonus,THR,"Rp300,000",Cash,Teknisi,Operasional
+EXP-006,02-Apr-2025,Bandwidth,INV-IDN-476846-89183-83,"Rp750,000",Transfer,ISP,Operasional
+EXP-007,13-Apr-2025,Gaji,Support,"Rp100,000",Transfer,Teknisi,Operasional
+EXP-008,02-Mei-2025,Bandwidth,INV-IDN-546946-85194-80,"Rp750,000",Transfer,ISP,Operasional
+EXP-009,20-Mei-2025,Listrik,Listrik Bulan Mei,"Rp150,000",Cash,PLN,Operasional
+EXP-010,02-Jun-2025,Bandwidth,INV-IDN-622339-78679-81,"Rp750,000",Transfer,ISP,Operasional
+EXP-011,20-Jun-2025,Listrik,Listrik Bulan Juni,"Rp150,000",Cash,PLN,Operasional
+EXP-012,02-Jul-2025,Bandwidth,INV-IDN-702455-13739-65,"Rp750,000",Transfer,ISP,Operasional
+EXP-013,04-Jul-2025,Gaji,Support,"Rp200,000",Transfer,Teknisi,Operasional
+EXP--014,20-Jul-2025,Listrik,Listrik Bulan Juli,"Rp150,000",Cash,PLN,Operasional
+EXP-015,24-Jul-2025,Gaji,Support,"Rp100,000",Transfer,Teknisi,Operasional
+EXP-016,02-Ags-2025,Bandwidth,INV-IDN-786283-15278-76,"Rp750,000",Transfer,ISP,Operasional
+EXP-017,20-Ags-2025,Listrik,Listrik Bulan Agustus,"Rp150,000",Cash,PLN,Operasional
+EXP-018,02-Sep-2025,Bandwidth,INV-IDN-878673-42293-72,"Rp750,000",Transfer,ISP,Operasional
+EXP-019,20-Sep-2025,Listrik,Listrik Bulan September,"Rp150,000",Cash,PLN,Operasional
+EXP-020,02-Okt-2025,Bandwidth,INV-DF-IDN-974251-23803-46,"Rp750,000",Transfer,ISP,Operasional
+EXP-021,02-Okt-2025,Gaji,Support,"Rp100,000",Transfer,Teknisi,Operasional
+EXP-022,20-Okt-2025,Listrik,Listrik Bulan Oktober,"Rp150,000",Cash,PLN,Operasional
+EXP-023,02-Nov-2025,Bandwidth,INV-DF-IDN-1075260-60759-98,"Rp750,000",Transfer,ISP,Operasional
+EXP-024,20-Nov-2025,Listrik,Listrik Bulan November,"Rp150,000",Cash,PLN,Operasional
+EXP-025,02-Des-2025,Bandwidth,INV-DF-IDN-1183116-71371-90,"Rp750,000",Transfer,ISP,Operasional
+EXP-026,20-Des-2025,Listrik,Listrik Bulan Desember,"Rp150,000",Cash,PLN,Operasional
+EXP-027,01-Jan-2026,Gaji,Support,"Rp100,000",Transfer,Teknisi,Operasional
+EXP-028,01-Jan-2026,Gaji,Support,"Rp100,000",Transfer,Teknisi,Operasional
+EXP-029,02-Jan-2026,Bandwidth,INV-DF-IDN-1301816-22854-91,"Rp750,000",Transfer,ISP,Operasional
+EXP-030,20-Jan-2026,Listrik,Listrik Bulan Januari,"Rp150,000",Cash,PLN,Operasional
+EXP-031,02-Feb-2026,Bandwidth,INV-DF-IDN-1425764-73470-0,"Rp750,000",Transfer,ISP,Operasional
+EXP-032,20-Feb-2026,Listrik,Listrik Bulan Februari,"Rp150,000",Cash,PLN,Operasional
+EXP-033,04-Mar-2026,Listrik,Listrik Bulan Maret,"Rp150,000",Cash,PLN,Operasional
+EXP-034,03-Apr-2026,Listrik,Listrik Bulan April,"Rp150,000",Cash,PLN,Operasional

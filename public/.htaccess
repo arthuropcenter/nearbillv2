@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# SPA fallback: arahkan semua rute ke index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
+
+# Cache asset statis untuk PWA
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|png|jpg|jpeg|svg|ico|woff2)$">
+    Header set Cache-Control "max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

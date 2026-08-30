@@ -1,0 +1,16 @@
+ID Customer,Nama Customer,Alamat,ID Paket,Nomor HP,Email,Status,Join Date,Leave Date,Keterangan
+NH-C001,Dede Wahyudin,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,02-03-2025,,5 Mbps
+NH-C002,Atit Karmila,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,02-03-2025,,5 Mbps
+NH-C003,Rangga,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,02-03-2025,,5 Mbps
+NH-C004,Tina Melinda,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,09-03-2025,,5 Mbps
+NH-C005,Akun,Kp. Babakan Nanggerang [Desa Sukajadi],NH-B-10,,,Aktif,09-03-2025,,10 Mbps
+NH-C006,Fauzi,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,13-04-2025,,5 Mbps
+NH-C007,Rohaeti,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Non-Aktif,04-07-2025,04-08-2025,5 Mbps
+NH-C008,Cahyana,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,04-07-2025,,5 Mbps
+NH-C009,Soba,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,24-07-2025,,5 Mbps
+NH-C010,Pipit,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,02-10-2025,,5 Mbps
+NH-C011,Pian,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,01-01-2026,,5 Mbps
+NH-C012,Dela,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,01-01-2026,,5 Mbps
+NH-C013,Yoga,Kp. Babakan Nanggerang [Desa Sukajadi],NH-S-5,,,Aktif,03-05-2026,,5 Mbps
+NH-C014,Ade Haeni,Kp. Babakan Nanggerang [Desa Sukajadi],NH-B-10,,,Aktif,04-05-2026,,10 Mbps
+NH-C015,Melly,Kp. Babakan Nanggerang [Desa Sukajadi],NH-B-10,,,Aktif,30-05-2026,,10 Mbps

@@ -1,0 +1,261 @@
+<?php
+require_once 'conn.php';
+require_once 'crypto.php';
+require_once 'RouterOS.php';
+require_auth();
+
+$p = get_payload();
+$routerId = (int) ($p['router_id'] ?? 1);
+$dryRun = !isset($p['dry_run']) || (bool) $p['dry_run'];
+$addMissing = isset($p['add_missing']) && (bool) $p['add_missing'];
+$fixUsername = isset($p['fix_username']) && (bool) $p['fix_username'];
+
+$stmt = $koneksi->prepare("SELECT * FROM tbl_routers WHERE id = ?");
+$stmt->bind_param('i', $routerId);
+$stmt->execute();
+$router = $stmt->get_result()->fetch_assoc();
+if (!$router) respond_error('Router tidak ditemukan', 404);
+
+$ipPort = explode(':', $router['ip_address']);
+$ip = $ipPort[0];
+$port = isset($ipPort[1]) ? (int) $ipPort[1] : 8728;
+
+$r = new RouterOS();
+if (!$r->connect($ip, $port, $router['username'], decrypt_router_password($router['password']))) {
+    respond_error('Login API router gagal', 500);
+}
+
+$secrets = $r->print('/ppp/secret');
+$active = $r->print('/ppp/active');
+$r->disconnect();
+
+$secretByName = [];
+foreach ($secrets as $s) {
+    $secretByName[$s['name']] = $s;
+}
+$activeNames = [];
+foreach ($active as $a) {
+    $activeNames[$a['name']] = $a;
+}
+
+// Peta profil router -> paket di DB (cocokkan nama plan dengan profil PPPoE)
+$planByProfile = [];
+$res = $koneksi->query("SELECT id, name_plan FROM tbl_plans WHERE enabled = 1");
+while ($row = $res->fetch_assoc()) {
+    $planByProfile[strtolower(trim($row['name_plan']))] = (int) $row['id'];
+}
+
+$customers = $koneksi
+    ->query("SELECT * FROM tbl_customers WHERE pppoe_username IS NOT NULL AND pppoe_username != '' ORDER BY id")
+    ->fetch_all(MYSQLI_ASSOC);
+
+// ---- Deteksi perbaikan username (fixUsername) dengan scoring ----
+// prioritas: nama eksak (100) > prefix nama (85) > fullname di comment (70) > username di comment (60)
+$fixMap = [];
+$fixCandidates = [];
+if ($fixUsername) {
+    foreach ($customers as $c) {
+        $uname = trim($c['pppoe_username']);
+        if ($uname === '' || isset($secretByName[$uname])) continue;
+        $best = null;
+        $bestScore = 0;
+        foreach ($secretByName as $sname => $s) {
+            $sn = strtolower($sname);
+            $cm = strtolower(trim($s['comment'] ?? ''));
+            $un = strtolower(trim($c['username']));
+            $fn = strtolower(trim($c['fullname']));
+            $score = 0;
+            if ($sn === $un || ($fn !== '' && $sn === $fn)) {
+                $score = 100;
+            } elseif (strlen($un) >= 3 && (strpos($sn, $un) === 0 || strpos($un, $sn) === 0)) {
+                $score = 85;
+            } elseif ($fn !== '' && $cm !== '' && (strpos($cm, $fn) !== false || strpos($fn, $cm) !== false)) {
+                $score = 70;
+            } elseif ($un !== '' && $cm !== '' && strpos($cm, $un) !== false) {
+                $score = 60;
+            }
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $sname;
+            }
+        }
+        if ($best && $bestScore >= 60 && $best !== $uname) {
+            $fixMap[$c['id']] = $best;
+            $fixCandidates[] = [
+                'customer_id' => (int) $c['id'],
+                'username' => $c['username'],
+                'fullname' => $c['fullname'],
+                'pppoe_lama' => $uname,
+                'pppoe_baru' => $best
+            ];
+        }
+    }
+}
+
+// ---- Status pelanggan (memakai username efektif setelah perbaikan) ----
+$statusChanges = [];
+$notOnRouter = [];
+$matchedOk = 0;
+$alreadyInactive = 0;
+
+foreach ($customers as $c) {
+    $effective = isset($fixMap[$c['id']]) ? $fixMap[$c['id']] : trim($c['pppoe_username']);
+    $onRouter = isset($secretByName[$effective]);
+    $isActive = isset($activeNames[$effective]);
+    $newStatus = $isActive ? 'Active' : 'Inactive';
+
+    if (!$onRouter) {
+        $notOnRouter[] = [
+            'customer_id' => (int) $c['id'],
+            'username' => $c['username'],
+            'fullname' => $c['fullname'],
+            'pppoe_username' => $effective
+        ];
+    }
+
+    if ($c['status'] !== $newStatus) {
+        $statusChanges[] = [
+            'customer_id' => (int) $c['id'],
+            'fullname' => $c['fullname'],
+            'pppoe_username' => $effective,
+            'status_lama' => $c['status'],
+            'status_baru' => $newStatus,
+            'alasan' => $onRouter
+                ? ($isActive ? 'Terhubung di router' : 'PPPoE tidak aktif di router')
+                : 'Username PPPoE tidak ditemukan di router'
+        ];
+    } else {
+        if ($newStatus === 'Active') $matchedOk++;
+        else $alreadyInactive++;
+    }
+}
+
+// ---- User PPPoE di router yang belum ada di DB pelanggan (mengecualikan yang sudah "diambil alih" oleh perbaikan username) ----
+$accounted = [];
+foreach ($customers as $c) {
+    $accounted[trim($c['pppoe_username'])] = true;
+}
+foreach ($fixCandidates as $fc) {
+    $accounted[$fc['pppoe_baru']] = true;
+}
+$missingOnDb = [];
+foreach ($secretByName as $sname => $s) {
+    if (isset($accounted[$sname])) continue;
+    $isActive = isset($activeNames[$sname]);
+    $missingOnDb[] = [
+        'name' => $sname,
+        'profile' => $s['profile'] ?? '',
+        'disabled' => ($s['disabled'] ?? 'false') === 'true',
+        'comment' => $s['comment'] ?? '',
+        'active' => $isActive,
+        'address' => $isActive ? ($activeNames[$sname]['address'] ?? '') : ''
+    ];
+}
+
+if (!$dryRun) {
+    // 1. Update status pelanggan
+    $upd = $koneksi->prepare("UPDATE tbl_customers SET status=? WHERE id=?");
+    foreach ($statusChanges as $sc) {
+        $upd->bind_param('si', $sc['status_baru'], $sc['customer_id']);
+        $upd->execute();
+    }
+
+    // 2. Perbaiki pppoe_username bila diminta
+    if ($fixUsername) {
+        $upd2 = $koneksi->prepare("UPDATE tbl_customers SET pppoe_username=? WHERE id=?");
+        foreach ($fixCandidates as $fc) {
+            $upd2->bind_param('si', $fc['pppoe_baru'], $fc['customer_id']);
+            $upd2->execute();
+        }
+    }
+
+    // 3. Sinkronkan paket (plan_id) untuk semua pelanggan yang terdaftar di router
+    $plansUpdated = 0;
+    $updP = $koneksi->prepare("UPDATE tbl_customers SET plan_id=? WHERE id=?");
+    foreach ($customers as $c) {
+        $eff = isset($fixMap[$c['id']]) ? $fixMap[$c['id']] : trim($c['pppoe_username']);
+        if (!isset($secretByName[$eff])) continue;
+        $pid = $planByProfile[strtolower(trim($secretByName[$eff]['profile'] ?? ''))] ?? null;
+        if (!$pid || (int) $c['plan_id'] === $pid) continue;
+        $updP->bind_param('ii', $pid, $c['id']);
+        if ($updP->execute()) $plansUpdated++;
+    }
+
+    // 4. Tambah pelanggan baru yang belum ada di DB bila diminta
+    $added = 0;
+    if ($addMissing) {
+        $ins = $koneksi->prepare(
+            "INSERT INTO tbl_customers
+            (username, password, photo, pppoe_username, pppoe_password, pppoe_ip, fullname,
+             address, city, district, state, zip, phonenumber, email, coordinates,
+             account_type, balance, service_type, plan_id, status, created_by)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        );
+        foreach ($missingOnDb as $m) {
+            if ($m['disabled']) continue;
+            $fullname = trim(explode('|', $m['comment'])[0] ?? '');
+            if ($fullname === '') $fullname = $m['name'];
+            $username = $m['name'];
+            $pw = '';
+            $photo = '/user.default.jpg';
+            $pppoeU = $m['name'];
+            $pppoePw = '';
+            $pppoeIp = $m['address'];
+            $address = '';
+            $city = $district = $state = '';
+            $zip = '';
+            $phone = '0';
+            $email = '';
+            $coords = '';
+            $acct = 'Personal';
+            $balance = 0;
+            $svc = 'PPPoE';
+            $pid = $planByProfile[strtolower(trim($m['profile']))] ?? null;
+            $status = $m['active'] ? 'Active' : 'Inactive';
+            $by = (int) $_SESSION['user_id'];
+
+            $ins->bind_param(
+                'ssssssssssssssssdssii',
+                $username, $pw, $photo, $pppoeU, $pppoePw, $pppoeIp, $fullname,
+                $address, $city, $district, $state, $zip, $phone, $email, $coords,
+                $acct, $balance, $svc, $pid, $status, $by
+            );
+            if ($ins->execute()) $added++;
+        }
+    }
+
+    // 5. Update status router online
+    $updR = $koneksi->prepare("UPDATE tbl_routers SET status='Online', last_seen=NOW() WHERE id=?");
+    $updR->bind_param('i', $routerId);
+    $updR->execute();
+
+    respond_ok([
+        'success' => true,
+        'message' => 'Sinkronisasi selesai',
+        'router' => $router['name'],
+        'status_updated' => count($statusChanges),
+        'usernames_fixed' => $fixUsername ? count($fixCandidates) : 0,
+        'plans_updated' => $plansUpdated,
+        'customers_added' => $addMissing ? $added : 0,
+        'status_changes' => $statusChanges,
+        'fix_candidates' => $fixUsername ? $fixCandidates : [],
+        'added_customers' => $addMissing ? $missingOnDb : []
+    ]);
+}
+
+respond_ok([
+    'success' => true,
+    'dry_run' => true,
+    'router' => $router['name'],
+    'identity' => $router['name'],
+    'stats' => [
+        'secret_total' => count($secrets),
+        'secret_enabled' => count(array_filter($secrets, fn($s) => ($s['disabled'] ?? 'false') !== 'true')),
+        'active_sessions' => count($active),
+        'customers_total' => count($customers)
+    ],
+    'status_changes' => $statusChanges,
+    'not_on_router' => $notOnRouter,
+    'fix_candidates' => $fixCandidates,
+    'missing_on_db' => $missingOnDb
+]);
