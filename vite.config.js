@@ -46,7 +46,7 @@ export default defineConfig({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            urlPattern: /\/nearbillv2\/api\//,
+            urlPattern: /(?:^|\/)(?:nearbillv2\/)?api\/.*/,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'nearbill-api',
