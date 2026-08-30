@@ -19,7 +19,7 @@ import {
 import { useAuth } from '../context/AuthContext'
 import { initials } from '../utils/format'
 
-const BRAND_LOGO = '/nearbillv2/dist/icons/logo.png'
+const BRAND_LOGO = '/icons/logo.png'
 
 export default function Drawer({ open, onClose }) {
   const { user, logout } = useAuth()

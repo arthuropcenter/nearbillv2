@@ -6,7 +6,7 @@ import { roleMeta, roleNav, appsForRole } from '../utils/roles'
 import { initials } from '../utils/format'
 import PortalWidget from '../components/PortalWidget'
 
-const BRAND_LOGO = '/nearbillv2/dist/icons/logo.png'
+const BRAND_LOGO = '/icons/logo.png'
 
 const MODULES = {
   teknisi: { app: 'teknisi', title: 'Modul Teknisi',   desc: 'Penugasan pemasangan, perbaikan, dan laporan teknis.' },

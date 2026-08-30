@@ -15,7 +15,7 @@ import {
   Wallet
 } from 'lucide-react'
 
-const BRAND_LOGO = '/nearbillv2/dist/icons/logo.png'
+const BRAND_LOGO = '/icons/logo.png'
 import { useAuth } from '../context/AuthContext'
 import { initials } from '../utils/format'
 

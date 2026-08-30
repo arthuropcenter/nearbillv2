@@ -2,7 +2,7 @@ import { ArrowLeft, MoreVertical } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { initials } from '../utils/format'
 
-const BRAND_LOGO = '/nearbillv2/dist/icons/logo.png'
+const BRAND_LOGO = '/icons/logo.png'
 
 export default function Header({ title, onMenu, showBack = false, onBack }) {
   const navigate = useNavigate()

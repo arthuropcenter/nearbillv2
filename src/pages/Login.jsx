@@ -7,7 +7,7 @@ import { useToast } from '../context/ToastContext'
 import { ROLE_META, appsForRole } from '../utils/roles'
 import PortalWidget from '../components/PortalWidget'
 
-const BRAND_LOGO = '/nearbillv2/dist/icons/logo.png'
+const BRAND_LOGO = '/icons/logo.png'
 
 const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']

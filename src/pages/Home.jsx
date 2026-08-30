@@ -8,7 +8,7 @@ import { initials } from '../utils/format'
 import { api } from '../api/client'
 import PortalWidget from '../components/PortalWidget'
 
-const BRAND_LOGO = '/nearbillv2/dist/icons/logo.png'
+const BRAND_LOGO = '/icons/logo.png'
 
 const ANN_ICON = { info: Info, maintenance: Wrench, outage: AlertTriangle }
 const ANN_BG = { info: 'rgba(59,130,246,.14)', maintenance: 'rgba(245,158,11,.14)', outage: 'rgba(239,68,68,.16)' }

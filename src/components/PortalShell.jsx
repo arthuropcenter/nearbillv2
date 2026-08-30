@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { roleMeta, roleNav } from '../utils/roles'
 import { initials } from '../utils/format'
 
-const BRAND_LOGO = '/nearbillv2/dist/icons/logo.png'
+const BRAND_LOGO = '/icons/logo.png'
 
 export default function PortalShell({ wide = false, children }) {
   const { user, logout } = useAuth()
