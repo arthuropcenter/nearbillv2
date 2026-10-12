@@ -2,17 +2,26 @@
 /**
  * NearBill v2 - Enkripsi password router
  * Password di DB tidak disimpan plaintext, tapi dienkripsi AES-256-CBC.
- * Kunci disimpan di luar webroot (C:\xampp\nearbill_secret.php).
+ * Kunci disimpan di luar webroot (<xampp>\nearbill_secret.php).
+ * Lokasi XAMPP dideteksi otomatis agar support G:\xampp maupun C:\xampp.
  */
 
-define('NEARBILL_SECRET_FILE', 'C:\\xampp\\nearbill_secret.php');
+define('NEARBILL_SECRET_FILE', dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'nearbill_secret.php');
+define('NEARBILL_SECRET_FILE_LEGACY', 'C:\\xampp\\nearbill_secret.php');
 
 function nearbill_secret_key()
 {
-    if (file_exists(NEARBILL_SECRET_FILE)) {
-        require_once NEARBILL_SECRET_FILE;
-        if (defined('NEARBILL_SECRET_KEY') && NEARBILL_SECRET_KEY) {
-            return NEARBILL_SECRET_KEY;
+    // Migrasi dari path lama C:\xampp jika instalasi sekarang di G:\xampp
+    foreach ([NEARBILL_SECRET_FILE, NEARBILL_SECRET_FILE_LEGACY] as $f) {
+        if ($f && file_exists($f)) {
+            require_once $f;
+            if (defined('NEARBILL_SECRET_KEY') && NEARBILL_SECRET_KEY) {
+                // Jika terbaca dari legacy tapi file utama belum ada, salin ke lokasi baru
+                if ($f !== NEARBILL_SECRET_FILE && !file_exists(NEARBILL_SECRET_FILE)) {
+                    @copy($f, NEARBILL_SECRET_FILE);
+                }
+                return NEARBILL_SECRET_KEY;
+            }
         }
     }
     $key = bin2hex(random_bytes(32));
