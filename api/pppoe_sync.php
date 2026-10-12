@@ -102,17 +102,41 @@ if ($fixUsername) {
     }
 }
 
+// Peta lowercase untuk pencocokan case-insensitive (MikroTik kadang beda kapital)
+$secretByLower = [];
+foreach ($secretByName as $sname => $s) {
+    $secretByLower[strtolower($sname)] = $sname;
+}
+$activeByLower = [];
+foreach ($activeNames as $aname => $a) {
+    $activeByLower[strtolower($aname)] = $aname;
+}
+
+function resolve_router_name($effective, $map, $lowerMap) {
+    if (isset($map[$effective])) return $effective;
+    $lk = strtolower($effective);
+    if (isset($lowerMap[$lk])) return $lowerMap[$lk];
+    return null;
+}
+
 // ---- Status pelanggan (memakai username efektif setelah perbaikan) ----
+// Status = status ADMIN (terdaftar & enabled di router), BUKAN online real-time.
+// Online real-time hanya untuk info, tidak mengubah status Active/Inactive.
 $statusChanges = [];
 $notOnRouter = [];
 $matchedOk = 0;
 $alreadyInactive = 0;
+$onlineNow = array_keys($activeNames);
 
 foreach ($customers as $c) {
     $effective = isset($fixMap[$c['id']]) ? $fixMap[$c['id']] : trim($c['pppoe_username']);
-    $onRouter = isset($secretByName[$effective]);
-    $isActive = isset($activeNames[$effective]);
-    $newStatus = $isActive ? 'Active' : 'Inactive';
+    $resolvedSecret = resolve_router_name($effective, $secretByName, $secretByLower);
+    $resolvedActive = resolve_router_name($effective, $activeNames, $activeByLower);
+    $onRouter = $resolvedSecret !== null;
+    $isOnline = $resolvedActive !== null;
+    $isDisabled = $onRouter && (($secretByName[$resolvedSecret]['disabled'] ?? 'false') === 'true');
+    // Terdaftar & enabled => Active, meskipun sedang offline. Hanya disabled / tidak ada di router => Inactive.
+    $newStatus = ($onRouter && !$isDisabled) ? 'Active' : 'Inactive';
 
     if (!$onRouter) {
         $notOnRouter[] = [
@@ -124,15 +148,23 @@ foreach ($customers as $c) {
     }
 
     if ($c['status'] !== $newStatus) {
+        if (!$onRouter) {
+            $alasan = 'Username PPPoE tidak ditemukan di router';
+        } elseif ($isDisabled) {
+            $alasan = 'Secret di-disable di router';
+        } elseif ($isOnline) {
+            $alasan = 'Terhubung di router';
+        } else {
+            $alasan = 'Terdaftar di router (sedang offline)';
+        }
         $statusChanges[] = [
             'customer_id' => (int) $c['id'],
             'fullname' => $c['fullname'],
             'pppoe_username' => $effective,
             'status_lama' => $c['status'],
             'status_baru' => $newStatus,
-            'alasan' => $onRouter
-                ? ($isActive ? 'Terhubung di router' : 'PPPoE tidak aktif di router')
-                : 'Username PPPoE tidak ditemukan di router'
+            'online' => $isOnline,
+            'alasan' => $alasan
         ];
     } else {
         if ($newStatus === 'Active') $matchedOk++;
@@ -247,6 +279,8 @@ if (!$dryRun) {
         'usernames_fixed' => $fixUsername ? count($fixCandidates) : 0,
         'plans_updated' => $plansUpdated,
         'customers_added' => $addMissing ? $added : 0,
+        'online_now' => array_values($onlineNow),
+        'online_count' => count($onlineNow),
         'status_changes' => $statusChanges,
         'fix_candidates' => $fixUsername ? $fixCandidates : [],
         'added_customers' => $addMissing ? $missingOnDb : []
@@ -264,6 +298,8 @@ respond_ok([
         'active_sessions' => count($active),
         'customers_total' => count($customers)
     ],
+    'online_now' => array_values($onlineNow),
+    'online_count' => count($onlineNow),
     'status_changes' => $statusChanges,
     'not_on_router' => $notOnRouter,
     'fix_candidates' => $fixCandidates,

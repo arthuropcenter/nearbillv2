@@ -70,7 +70,8 @@ export default function Routers() {
         res.plans_updated ? `${res.plans_updated} paket` : null,
         res.customers_added ? `${res.customers_added} pelanggan` : null
       ].filter(Boolean)
-      push(bits.length ? `Sinkron selesai: ${bits.join(', ')}` : 'Data sudah sinkron', 'success')
+      const onlineInfo = res.online_count != null ? ` — ${res.online_count} online saat ini` : ''
+      push(bits.length ? `Sinkron selesai: ${bits.join(', ')}${onlineInfo}` : `Data sudah sinkron${onlineInfo}`, 'success')
       load()
     } catch (e) {
       push(e.message, 'error')
