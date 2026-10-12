@@ -1,4 +1,4 @@
-const FUNNEL_URL = 'https://desktop-hslfvn2.tail54c606.ts.net/nearbillv2/api'
+const FUNNEL_URL = 'https://desktop-ic3ehve.tail54c606.ts.net/nearbillv2/api'
 const isVercel = typeof location !== 'undefined' && /(?:^|\.)vercel\.app$/.test(location.hostname)
 const BASE = import.meta.env.VITE_API_URL || (isVercel ? FUNNEL_URL : '/nearbillv2/api')
 
