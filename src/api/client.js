@@ -40,7 +40,11 @@ export async function api(path, { method = 'GET', body, params } = {}) {
     throw err
   }
   if (data === null) {
-    const err = new Error('Respons server kosong/bukan JSON. Coba lagi, atau cek koneksi ke router.')
+    const snippet = (text || '').replace(/\s+/g, ' ').trim().slice(0, 160)
+    const err = new Error(
+      `Respons server kosong/bukan JSON (HTTP ${res.status})` +
+      (snippet ? `: ${snippet}` : '. Coba lagi, atau cek koneksi ke router.')
+    )
     err.status = res.status
     throw err
   }

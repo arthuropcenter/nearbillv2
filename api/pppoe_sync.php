@@ -1,4 +1,20 @@
 <?php
+// Jaminan output selalu JSON valid:
+// - buffer semua output, bersihkan sebelum respond (warning stray tidak ikut)
+// - tangkap fatal error via shutdown handler agar tidak jadi body kosong
+ob_start();
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+        while (ob_get_level() > 0) { @ob_end_clean(); }
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json');
+        }
+        error_log('[pppoe_sync] FATAL: ' . ($err['message'] ?? 'unknown') . ' in ' . ($err['file'] ?? '?') . ':' . ($err['line'] ?? '?'));
+        echo json_encode(['error' => 'Sinkron gagal di server: ' . ($err['message'] ?? 'fatal error')]);
+    }
+});
 // Jangan biarkan warning/notice merusak output JSON (masuk log saja)
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
@@ -10,6 +26,15 @@ require_auth();
 // Router lambat / banyak secret: beri waktu eksekusi lebih panjang
 @set_time_limit(120);
 
+/** Respond JSON yang pasti bersih dari output stray. */
+function sync_respond($data, $code = 200) {
+    while (ob_get_level() > 0) { @ob_end_clean(); }
+    if ($code !== 200) http_response_code($code);
+    header('Content-Type: application/json');
+    echo json_encode($data);
+    exit;
+}
+
 $p = get_payload();
 $routerId = (int) ($p['router_id'] ?? 1);
 $dryRun = !isset($p['dry_run']) || (bool) $p['dry_run'];
@@ -20,7 +45,8 @@ $stmt = $koneksi->prepare("SELECT * FROM tbl_routers WHERE id = ?");
 $stmt->bind_param('i', $routerId);
 $stmt->execute();
 $router = $stmt->get_result()->fetch_assoc();
-if (!$router) respond_error('Router tidak ditemukan', 404);
+if (!$router) sync_respond(['error' => 'Router tidak ditemukan'], 404);
+error_log('[pppoe_sync] start router_id=' . $routerId . ' router=' . ($router['name'] ?? '?'));
 
 $ipPort = explode(':', $router['ip_address']);
 $ip = $ipPort[0];
@@ -28,13 +54,16 @@ $port = isset($ipPort[1]) ? (int) $ipPort[1] : 8728;
 
 $r = new RouterOS();
 if (!$r->connect($ip, $port, $router['username'], decrypt_router_password($router['password']))) {
-    respond_error('Login API router gagal', 500);
+    error_log('[pppoe_sync] connect GAGAL ke ' . $ip . ':' . $port);
+    sync_respond(['error' => 'Login API router gagal (' . $ip . ':' . $port . ')'], 500);
 }
+error_log('[pppoe_sync] connect OK ke ' . $ip . ':' . $port);
 
 // Ambil hanya field yang dibutuhkan agar payload kecil & sinkronisasi cepat
 $secrets = $r->print('/ppp/secret', ['=.proplist=.id,name,profile,disabled,comment']);
 $active = $r->print('/ppp/active', ['=.proplist=.name,.address']);
 $r->disconnect();
+error_log('[pppoe_sync] secrets=' . count((array) $secrets) . ' active=' . count((array) $active));
 
 $secretByName = [];
 foreach ((array) $secrets as $s) {
@@ -282,7 +311,8 @@ if (!$dryRun) {
     $updR->bind_param('i', $routerId);
     $updR->execute();
 
-    respond_ok([
+    error_log('[pppoe_sync] selesai: status_updated=' . count($statusChanges) . ' online=' . count($onlineNow));
+    sync_respond([
         'success' => true,
         'message' => 'Sinkronisasi selesai',
         'router' => $router['name'],
@@ -298,7 +328,7 @@ if (!$dryRun) {
     ]);
 }
 
-respond_ok([
+sync_respond([
     'success' => true,
     'dry_run' => true,
     'router' => $router['name'],
