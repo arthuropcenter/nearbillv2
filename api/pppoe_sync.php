@@ -1,8 +1,14 @@
 <?php
+// Jangan biarkan warning/notice merusak output JSON (masuk log saja)
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
 require_once 'conn.php';
 require_once 'crypto.php';
 require_once 'RouterOS.php';
 require_auth();
+
+// Router lambat / banyak secret: beri waktu eksekusi lebih panjang
+@set_time_limit(120);
 
 $p = get_payload();
 $routerId = (int) ($p['router_id'] ?? 1);
@@ -31,19 +37,24 @@ $active = $r->print('/ppp/active', ['=.proplist=.name,.address']);
 $r->disconnect();
 
 $secretByName = [];
-foreach ($secrets as $s) {
+foreach ((array) $secrets as $s) {
+    if (!is_array($s) || empty($s['name'])) continue;
     $secretByName[$s['name']] = $s;
 }
 $activeNames = [];
-foreach ($active as $a) {
+foreach ((array) $active as $a) {
+    if (!is_array($a) || empty($a['name'])) continue;
     $activeNames[$a['name']] = $a;
 }
 
 // Peta profil router -> paket di DB (cocokkan nama plan dengan profil PPPoE)
 $planByProfile = [];
-$res = $koneksi->query("SELECT id, name_plan FROM tbl_plans WHERE enabled = 1");
-while ($row = $res->fetch_assoc()) {
-    $planByProfile[strtolower(trim($row['name_plan']))] = (int) $row['id'];
+$planRes = $koneksi->query("SELECT id, name_plan FROM tbl_plans WHERE enabled = 1");
+if ($planRes) {
+    while ($row = $planRes->fetch_assoc()) {
+        if (!isset($row['name_plan'])) continue;
+        $planByProfile[strtolower(trim($row['name_plan']))] = (int) $row['id'];
+    }
 }
 
 $customers = $koneksi

@@ -60,10 +60,10 @@ export default function Routers() {
   const sync = async (r) => {
     setSyncId(r.id)
     try {
-      const res = await api('/pppoe_sync.php', {
+      const res = (await api('/pppoe_sync.php', {
         method: 'POST',
         body: { router_id: r.id, dry_run: false, fix_username: true, add_missing: true }
-      })
+      })) || {}
       const bits = [
         res.status_updated ? `${res.status_updated} status` : null,
         res.usernames_fixed ? `${res.usernames_fixed} username` : null,

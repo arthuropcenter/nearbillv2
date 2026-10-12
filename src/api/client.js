@@ -26,15 +26,21 @@ export async function api(path, { method = 'GET', body, params } = {}) {
   }
 
   const res = await fetch(url, opts)
+  const text = await res.text()
   let data = null
   try {
-    data = await res.json()
+    data = text ? JSON.parse(text) : null
   } catch (e) {
     /* respon non-JSON */
   }
 
   if (!res.ok) {
     const err = new Error(data?.error || 'Terjadi kesalahan pada server')
+    err.status = res.status
+    throw err
+  }
+  if (data === null) {
+    const err = new Error('Respons server kosong/bukan JSON. Coba lagi, atau cek koneksi ke router.')
     err.status = res.status
     throw err
   }
